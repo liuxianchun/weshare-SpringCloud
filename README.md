@@ -5,7 +5,7 @@
 > 这是本人学习了springcloud后的实践项目
 ## 说明
 
-> 本项目前后端不完全分离，前端页面通过ajax请求访问后端。项目一共有system,userservice,fileservice,management,gateway等五个服务，服务间通过openfeign完成服务调用或是通过rabbitmq完成跨服务功能。面向外部访问的使用https保证安全性，服务内部通信使用http。使用redis作为分布式锁，尽可能重复操作。由于本项目重点在于微服务，所以功能点并不是很全面。
+> 本项目前后端不完全分离，前端页面通过ajax请求访问后端。项目一共有system,userservice,fileservice,management,gateway等五个服务，服务间通过openfeign完成服务调用或是通过rabbitmq完成跨服务功能。面向外部访问的使用https保证安全性，服务内部通信使用http。使用redis作为分布式锁，尽可能避免重复操作。由于本项目重点在于微服务，所以功能点并不是很全面。
 
 ## 技术栈
 
