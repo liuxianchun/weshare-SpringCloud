@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>weshare后台管理系统</title>
+    <script type="text/javascript" src="../js/vue.min.js"></script>
+    <script type="text/javascript" src="../elementui/index.js"></script>
+    <script type="text/javascript" src="../js/axios.min.js"></script>
+    <script type="text/javascript" src="../js/main.js"></script>
+    <link rel="stylesheet" type="text/css" href="../elementui/elementui.css">
+    <style>
+        img{
+            width: 400px;
+            height:280px;
+        }
+        .card{
+            display: inline-block;
+            margin: 5px;
+            width: 32%;
+            height: 380px
+        }
+        .card button{
+            margin: 6px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+<script>
+    window.onload = function () {
+        new Vue({
+            el:'#app',
+            data:{
+                src:src,
+                api:api,
+                carousel:[],
+                msg:'hello',
+                fileList:[],
+                uploadForm:{
+                    id:''
+                }
+            },
+            methods:{
+                getAllResources(){
+                    this.getResources('carousel');
+                },
+                getResources(type){
+                    axios({
+                        url:api+'resources/'+type,
+                        method:'get'
+                    }).then(res=>{
+                        switch (type) {
+                            case 'carousel':
+                                this.carousel = res.data.data;
+                                this.msg = res.data.message;
+                                break;
+                            default:
+                                console.log('类型错误');
+                        }
+                    })
+                },
+                deleteResources(id,type){
+                    console.log(id);
+                    console.log(this.carousel);
+                    this.$confirm('此操作将永久删除该文件, 是否继续?', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        axios({
+                            url:api+'resources/delete',
+                            method:'delete',
+                            params:{id:id}
+                        }).then(res=>{
+                            console.log(res.data);
+                            this.getResources(type);
+                            if(res.data.result){
+                                this.$message({
+                                    type: 'success',
+                                    message: '删除成功!'
+                                });
+                            }else{
+                                this.$message({
+                                    type: 'error',
+                                    message: res.data.message
+                                });
+                            }
+                        });
+                    }).catch(() => {
+                        this.$message({
+                            type: 'info',
+                            message: '已取消删除'
+                        });
+                    });
+                },
+                updateResources(id,type){
+
+                },
+                addResources(type){
+
+                },
+                beforeUpload(file,id){
+                    console.log(id);
+                    this.uploadForm.id = id;
+                },
+                carouselSuccess(response){
+                    console.log(response);
+                    if(response.result){
+                        this.$message({
+                            type: 'success',
+                            message: '添加/修改成功!'
+                        });
+                        this.getResources('carousel');
+                    }else{
+                        this.$message({
+                            type: 'error',
+                            message: response.message
+                        });
+                    }
+                },
+                su(fileList){
+                    console.log(fileList);
+                    fileList = null;
+                }
+            },
+            mounted(){
+                //初始化获取资源
+                this.getAllResources();
+            }
+        })
+    };
+</script>
+<div id="app">
+    <div style="margin-left:80px;margin-right: 80px">
+        <el-link :underline="false" href="/"><h2>登录</h2></el-link><br><hr>
+        <!--轮播图start-->
+        <el-link :underline="false"><h3>轮播图</h3></el-link><br>
+        <el-upload
+            name="file"
+            action="/resources/add?type=carousel"
+            multiple
+            :show-file-list="false"
+            :on-success="carouselSuccess"
+        >
+            <el-button size="small" type="primary">点击上传</el-button>
+        </el-upload>
+        <el-space wrap>
+            <el-card v-for="item in carousel" class="card">
+                <img :src="src+item.path"/>
+                <el-button @click="deleteResources(item.id,item.type)" type="primary">删除</el-button>
+                <el-upload
+                        style="display: inline-block"
+                        name="file"
+                        action="/resources/update"
+                        :data="uploadForm"
+                        multiple
+                        :show-file-list="false"
+                        :before-upload="(file)=>beforeUpload(file,item.id)"
+                        :on-success="carouselSuccess"
+                >
+                    <el-button type="primary">更新</el-button>
+                </el-upload>
+            </el-card>
+        </el-space>
+        <!--轮播图end-->
+    </div>
+</div>
+</body>
+</html>

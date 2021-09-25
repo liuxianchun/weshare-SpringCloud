@@ -1,0 +1,108 @@
+#使用""表示字符串，否则0开头视为八进制
+weshare:
+  #工作机器ID(long)
+  workerId: 12
+  #序列号(long)
+  datacenterId: 16
+
+server:
+  port: 7000
+  servlet:
+    context-path: /
+    session:
+      timeout: 12h
+
+spring:
+  application:
+    name: user-service
+  #redis
+  redis:
+    host: localhost
+    port: 6379
+    timeout: 2000
+    database: 1
+    lettuce:
+      pool:
+        max-active: 15
+        max-idle: 10
+        max-wait: 5000ms
+  session:
+    store-type: redis
+
+  rabbitmq:
+    addresses: localhost:5672
+    username: guest
+    password: guest
+    virtual-host: /
+    connection-timeout: 10000
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true  #消息发送失败则通知生产者
+    listener:
+      simple:
+        acknowledge-mode: manual   #手动应答消息
+        concurrency: 500    #消费端最小并发数
+        max-concurrency: 10000    #消费端最大并发数
+        prefetch: 5000   #一次请求中预处理的消息数
+
+  cloud:
+    #配置nacos地址
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+  #数据库
+  datasource:
+    #type: com.alibaba.druid.pool.DruidDataSource
+    url: jdbc:mysql://localhost:3306/weshare?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&allowMultiQueries=true&useAffectedRows=true
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  #邮件
+  mail:
+    host: smtp.163.com
+    username: xxxx@163.com
+    password: xxxx
+    default-encoding: UTF-8
+    protocol: smtps
+    port: 465
+    properties:
+      mail:
+         smtp:
+           auth: true
+           socketFactory.class: javax.net.ssl.SSLSocketFactory
+           #SSLSocketFactory类的端口
+           socketFactory:
+             port: 465
+           connectiontimeout: 5000
+           timeout: 10000
+           writetimeout: 10000
+
+  #mvc
+  mvc:
+    # 静态文件请求匹配方式
+    static-path-pattern: /**
+    view:
+      prefix: /page/
+      suffix: .html
+  resources:
+    # 修改默认的静态寻址资源目录 多个使用逗号分隔
+    static-locations: classpath:/static/
+  servlet:
+    multipart:
+      max-request-size: 50MB
+      max-file-size: 20MB
+
+#开启knife4j调试  http://localhost:7000/doc.html
+knife4j:
+  enable: true
+  setting:
+    enableDebug: false
+
+logging:
+  #  在当前项目下生成日志文件
+  file:
+    name: user.log
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml

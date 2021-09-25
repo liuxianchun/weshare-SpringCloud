@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>weshare管理员登录</title>
+    <script type="text/javascript" src="../js/vue.min.js"></script>
+    <script type="text/javascript" src="../elementui/index.js"></script>
+    <script type="text/javascript" src="../js/axios.min.js"></script>
+    <script type="text/javascript" src="../js/main.js"></script>
+    <link rel="stylesheet" type="text/css" href="../elementui/elementui.css">
+</head>
+<body>
+<script>
+    window.onload=function () {
+        new Vue({
+            el:'#app',
+            data:{
+                api:api,
+                admin:{
+                    name:'',
+                    password:''
+                },
+                msg:''
+            },
+            methods:{
+                login(){
+                    axios({
+                        url:api+'user/login',
+                        method:'post',
+                        data:{
+                            name:this.admin.name,
+                            password:this.admin.password
+                        }
+                    }).then(res=>{
+                        console.log(res.data);
+                        if(res.data.result){
+                            window.location.href = 'view/home';
+                        }
+                        else{
+                            this.$message({
+                                type:'error',
+                                message:res.data.message
+                            });
+                        }
+                    })
+                }
+            }
+        })
+    };
+</script>
+<div id="app">
+    <el-card style="width: 420px;margin: 80px 550px;padding: 35px">
+        <el-link :underline="false" style="margin-left: 70px" href="/view/home"><h2>wesahre后台管理系统</h2></el-link>
+        <el-form style="width: 350px">
+            <el-form-item>
+                用户名<el-input v-model="admin.name" prefix-icon="el-icon-user"></el-input>
+            </el-form-item>
+            <el-form-item>
+                密码<el-input v-model="admin.password" type="password" prefix-icon="el-icon-lock"></el-input>
+            </el-form-item>
+            <el-button type="primary" @click="login" style="margin-left: 42%">登录</el-button>
+            <br><span style="color: red">{{this.msg}}</span>
+        </el-form>
+    </el-card>
+</div>
+</body>
+</html>

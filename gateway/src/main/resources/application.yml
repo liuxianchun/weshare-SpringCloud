@@ -1,0 +1,42 @@
+server:
+  port: 9527
+  ssl:
+    key-store: E:\https\6319691_huanming.top_tomcat\6319691_huanming.top.pfx
+    key-store-type: PKCS12
+    key-store-password: 0bU03Gfa
+
+spring:
+  application:
+    name: gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+    gateway:
+      httpclient:
+        ssl:
+          useInsecureTrustManager: true
+      discovery:
+        locator:
+          enabled: true   #开启从注册中心动态创建路由的功能，利用微服务名进行路由
+      routes:
+        - id: management_routh #路由id,需唯一
+          uri: lb:https://management   #匹配后提供服务的地址(默认是http，需要加上https:)
+          predicates:
+            - Path=/management/**
+        - id: fileservice_routh #路由id,需唯一
+          uri: lb://file-service   #匹配后提供服务的地址(默认是http，需要加上https:)
+          predicates:
+            - Path=/file/**
+
+
+#减少日志
+logging:
+  level:
+    com:
+      alibaba:
+        nacos:
+          client:
+            naming: WARN
+  file:
+    name: gateway.log
