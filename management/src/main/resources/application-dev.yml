@@ -1,0 +1,75 @@
+server:
+  port: 10000
+  servlet:
+    session:
+      timeout: 2h
+    context-path: /
+  ssl:
+    key-store: E:\https\6319691_huanming.top_tomcat\6319691_huanming.top.pfx
+    key-store-type: PKCS12
+    key-store-password: 0bU03Gfa
+
+spring:
+  application:
+    name: management
+  #redis
+  redis:
+    host: localhost
+    port: 6379
+    timeout: 2000
+    database: 1
+    lettuce:
+      pool:
+        max-active: 15
+        max-idle: 10
+        max-wait: 5000ms
+  resources:
+    # 修改默认的静态寻址资源目录 多个使用逗号分隔
+    static-locations: classpath:/static/
+  mvc:
+    # 静态文件请求匹配方式
+    static-path-pattern: /**
+    view:
+      prefix: /page/
+      suffix: .html
+  servlet:
+    multipart:
+      max-request-size: 50MB
+      max-file-size: 20MB
+
+  #数据库
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/weshare?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&allowMultiQueries=true&useAffectedRows=true
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.alibaba.druid.pool.DruidDataSource
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000 #连接超时配置
+        readTimeout: 10000 #执行超时配置
+
+#减少日志
+logging:
+  level:
+    com:
+      alibaba:
+        nacos:
+          client:
+            naming: WARN
+  #  在当前项目下生成日志文件
+  file:
+    name: manage.log
+
+#开启knife4j调试  https://localhost:10000/doc.html
+knife4j:
+  enable: true
+  setting:
+    enableDebug: false

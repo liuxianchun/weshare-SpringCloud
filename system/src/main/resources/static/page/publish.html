@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>publish</title>
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/vue.min.js"></script>
+    <script type="text/javascript" src="../elementui/index.js"></script>
+    <script type="text/javascript" src="../js/axios.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="../elementui/elementui.css"/>
+    <link rel="stylesheet" type="text/css" href="../css/main.css">
+    <link rel="stylesheet" type="text/css" href="../css/home.css">
+</head>
+<body>
+<script>
+    window.onload = function () {
+        new Vue({
+            el:'#app',
+            data:{
+                api:api,
+                src:src,
+                loading:false,
+                user:{uid:'',username:'',avatar:''},
+                activeIndex:'1',
+                carousel:[],
+                imageUrl:'',
+                videoForm:{
+                    video:'',
+                    poster:'',
+                    title:'',
+                    introduction:''
+                },
+                fileForm:{
+                    title:'',
+                    introduction:''
+                },
+                articleForm:{
+                    title:'',
+                    content:''
+                }
+            },
+            methods:{
+                handleSelect(key,keyPath){
+                    this.activeIndex = key;
+                    console.log(key,keyPath);
+                },
+                videoSave(file){
+                    let type = file.name.split('.').pop().toUpperCase();
+                    let isVideo = ('MP4/RMVB/RM/AVI/MKV/FLV/WMV/MPG/MPEG'.indexOf(type)!==-1);
+                    let isLt100M = file.size / 1024 / 1024 < 100;
+                    if(!isVideo){
+                        this.$message.warning('视频格式错误');
+                        this.$refs.videoUpload.clearFiles();
+                        return false;
+                    }
+                    if(!isLt100M){
+                        this.$message.warning('视频文件过大!');
+                        this.$refs.videoUpload.clearFiles();
+                        return false;
+                    }
+                    this.videoForm.video = file.raw;
+                },
+                /*移除视频*/
+                videoRemove(){
+                    this.videoForm.video = '';
+                },
+                imgSaveToUrl(file){
+                    let type = file.name.split('.').pop().toUpperCase();
+                    console.log(type);
+                    let isJPG = ('JPG/PNG/JPEG'.indexOf(type)!==-1);
+                    let isLt5M = file.size / 1024 / 1024 < 5;
+                    if (!isJPG) {
+                        this.$message.warning('上传图片只能是 JPG/PNG 格式!');
+                        return false;
+                    }
+                    if (!isLt5M) {
+                        this.$message.warning('上传图片大小不能超过 5MB!');
+                        return false;
+                    }
+                    this.videoForm.poster = file.raw;
+                    let URL = window.URL || window.webkitURL;
+                    this.imageUrl = URL.createObjectURL(file.raw);
+                    console.log(this.imageUrl);
+                },
+                beforeFileUpload(){
+                    if(this.fileForm.title.trim()===''||this.fileForm.introduction.trim()===''){
+                        this.$message.warning('标题及简介不能为空');
+                        return false;
+                    }
+                },
+                /*发布之后*/
+                afterPublish(response){
+                    this.loading = false;
+                    console.log(response);
+                    if(response.result){
+                        this.$alert(response.data.message, '发布成功', {
+                            confirmButtonText: '确定',
+                            callback: action => {
+                                window.location.href = '/';
+                            }
+                        });
+                    }else
+                        this.$message.error(response.data.message);
+                },
+                /*发布视频投稿*/
+                deliveryVideo(){
+                    if(Object.keys(this.videoForm.video).length===0){
+                        this.$message.warning('必须上传视频');
+                        return false;
+                    }
+                    if(this.videoForm.title.trim().length===0){
+                        this.$message.warning('必须设置标题');
+                        return false;
+                    }
+                    if(this.videoForm.introduction.trim().length===0){
+                        this.$message.warning('必须设置简介');
+                        return false;
+                    }
+                    let formData = new FormData();
+                    formData.append('video',this.videoForm.video);
+                    formData.append('poster',this.videoForm.poster);
+                    formData.append('title',this.videoForm.title);
+                    formData.append('introduction',this.videoForm.introduction);
+                    this.loading = true;
+                    axios({
+                       url:api+'publish/video',
+                       method:'post',
+                       data:formData,
+                       headers:{
+                           "Content-Type":"multipart/form-data", //文件上传时的格式
+                       }
+                    }).then(res=>{
+                        this.loading = false;
+                        console.log(res.data);
+                        if(!res.data.result){
+                            this.$message.error(res.data.message);
+                        }else{
+                            this.$alert(res.data.message, '发布成功', {
+                                confirmButtonText: '确定',
+                                callback: action => {
+                                    window.location.href = '/';
+                                }
+                            });
+                        }
+                    });
+                },
+                deliveryFile(){
+                    this.loading = true;
+                    this.$refs.fileUpload.submit();
+                },
+                deliveryArticle(){
+                    if (this.articleForm.title.trim().length===0||this.articleForm.content.trim().length===0){
+                        this.$message.warning('请输入文章标题及内容');
+                        return;
+                    }
+                    if (this.articleForm.content.length<200){
+                        this.$message.warning('文章内容长度不能少于200');
+                        return;
+                    }
+                    this.loading = true;
+                    axios({
+                        url:api+'publish/article',
+                        method:'post',
+                        data:{
+                            title:this.articleForm.title,
+                            content:this.articleForm.content
+                        }
+                    }).then(res=>{
+                        this.loading = false;
+                        if (res.data.result){
+                            this.$alert(res.data.message, '发布成功', {
+                                confirmButtonText: '确定',
+                                callback: action => {
+                                    window.location.href = '/';
+                                }
+                            });
+                        }
+                        else{
+                            this.$message.error(res.data.message);
+                        }
+                    }).catch(err=>{
+                        this.$message.error('发布失败');
+                    })
+                }
+            },
+            mounted(){
+                let localUser = JSON.parse(localStorage.getItem("user"));
+                if (localUser!=null)
+                    this.user = localUser;
+                console.log(localUser);
+                console.log(this.user);
+                /*if(this.user==null)
+                    window.location.href='/view/login';*/
+            }
+        })
+    }
+</script>
+<div id="app">
+    <el-container>
+        <!--顶栏容器-->
+        <template>
+            <el-affix :offset="120">
+                <el-header class="top">
+                    <div>
+                        <el-menu :default-active="activeIndex" mode="horizontal"
+                                 @select="handleSelect" active-text-color="#409EFF">
+                            <el-menu-item style="margin-left: 40px;margin-right: 40px">
+                                <el-link :underline="false" href="/"><h2>We Share</h2></el-link>
+                            </el-menu-item>
+                            <el-menu-item index="1" class="menu-item">视频</el-menu-item>
+                            <el-menu-item index="2" class="menu-item">文件</el-menu-item>
+                            <el-menu-item index="3" class="menu-item">专栏</el-menu-item>
+                            <a v-if="user==null" href="/view/login">
+                                <el-avatar style="margin: 10px;float: right;">登录</el-avatar>
+                            </a>
+                            <a v-else href="/view/userInfo">
+                                <el-avatar style="margin: 10px;float: right;" :src="src+user.avatar"></el-avatar>
+                            </a>
+                        </el-menu>
+                    </div>
+                </el-header>
+            </el-affix>
+        </template>
+        <!--顶栏容器end-->
+        <!--主体-->
+        <el-container>
+            <el-aside style="width:100px;background-color: gray">Aside-L</el-aside>
+            <el-container>
+                <!--主要区域容器-->
+                <el-main>
+                    <div class="main" style="height: 1200px;margin: 20px 70px 70px">
+                        <!--弹出框-->
+                        <el-dialog :visible="loading" title="" center width="450px">
+                            <i class="el-icon-loading"></i>上传中,请稍后...
+                            <template #footer>
+                                <span>
+                                    <el-button type="primary" @click="loading = false">确 定</el-button>
+                                </span>
+                            </template>
+                        </el-dialog>
+                        <!--弹出框end-->
+                        <!--视频上传模块-->
+                        <div v-show="activeIndex=='1'">
+                            <h2>视频上传</h2>
+                            <el-upload
+                                ref='videoUpload'
+                                class="upload"
+                                drag
+                                action="/"
+                                limit="1"
+                                :on-change="videoSave"
+                                :on-remove="videoRemove"
+                                :auto-upload="false"
+                            >
+                                <i class="el-icon-upload"></i>
+                                <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+                                <template #tip>
+                                    <div class="el-upload__tip">
+                                        只能上传视频文件，且不超过100MB
+                                    </div>
+                                </template>
+                            </el-upload>
+                            <el-divider></el-divider>
+                            <h2>基本信息</h2>
+                            <p>视频封面设置(格式jpg/jpeg/png,文件大小<5M)</p>
+                            <el-upload
+                                    class="avatar-uploader"
+                                    action="/"
+                                    :show-file-list="false"
+                                    :on-change="imgSaveToUrl"
+                                    :auto-upload="false"
+                            >
+                                <img v-if="imageUrl" :src="imageUrl" class="img">
+                                <i v-else class="el-icon-plus img-uploader-icon"></i>
+                            </el-upload>
+                            <p>视频标题</p>
+                            <el-input type="text" placeholder="请输入标题" v-model="videoForm.title"
+                                      maxlength="50" show-word-limit></el-input>
+                            <p>视频简介</p>
+                            <el-input type="textarea" placeholder="请输入简介" v-model="videoForm.introduction"
+                                      maxlength="300" show-word-limit :autosize="{ minRows: 8, maxRows: 12}"></el-input>
+                            <el-divider></el-divider>
+                            <h2>发布稿件</h2>
+                            <el-button type="primary" large round @click="deliveryVideo">发布稿件</el-button>
+                        </div>
+
+                        <!--文件发布模块-->
+                        <div v-show="activeIndex==2">
+                            <h2>文件标题</h2>
+                            <el-input type="text" placeholder="请输入标题" v-model="fileForm.title"
+                                      maxlength="20" show-word-limit></el-input>
+                            <h2>文件简介</h2>
+                            <el-input type="textarea" placeholder="请输入简介" v-model="fileForm.introduction"
+                                      maxlength="200" show-word-limit :autosize="{ minRows: 6, maxRows: 9}"></el-input>
+                            <h2>提交文件</h2>
+                            <el-upload
+                                    ref="fileUpload"
+                                    drag
+                                    :action=api+'publish/file'
+                                    :data="fileForm"
+                                    :on-change="beforeFileUpload"
+                                    :on-success="afterPublish"
+                                    :auto-upload="false"
+                                    limit="1"
+                            >
+                                <i class="el-icon-upload"></i>
+                                <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+                                <div class="el-upload__tip" slot="tip">文件大小不能超过50MB</div>
+                            </el-upload>
+                            <el-divider></el-divider>
+                            <h2>发布稿件</h2>
+                            <el-button type="primary" large round @click="deliveryFile">发布稿件</el-button>
+                        </div>
+                        <!--文章发布模块-->
+                        <div v-show="activeIndex==3">
+                            <h3>文章标题</h3>
+                            <el-input type="text" placeholder="请输入标题" v-model="articleForm.title"
+                                      maxlength="30" show-word-limit></el-input>
+                            <h3>文章内容</h3>
+                            <el-input type="textarea" placeholder="请输入内容" v-model="articleForm.content" maxlength="10000"
+                                      show-word-limit :autosize="{ minRows: 10, maxRows: 200}"></el-input>
+                            <el-divider></el-divider>
+                            <el-button type="primary" large round @click="deliveryArticle">发布稿件</el-button>
+                        </div>
+                    </div>
+                </el-main>
+                <!--主要区域容器end-->
+            </el-container>
+            <!--右栏容器-->
+            <el-aside style="width: 100px;background-color: gray;">
+                Aside-R
+            </el-aside>
+        </el-container>
+        <!--主体end-->
+        <!--底栏容器-->
+        <el-footer class="el-footer">
+            <div class="footer">
+                <div class="header"><p>weshare 视频文件共享交流平台</p></div>
+                <div class="github">
+                    <a href="https://github.com/liuxianchun/weshare" target="_blank">
+                        <div class="github-but"></div>
+                    </a>
+                </div>
+                <div class="mod_help">
+                    <p>
+                        <el-link href="/view/home" :underline="false">首页</el-link>
+                        <span>|</span>
+                        <el-link href="https://github.com/liuxianchun" :underline="false">关于我们</el-link>
+                        <span>|</span>
+                        <el-link href="https://github.com/liuxianchun" :underline="false">联系我们</el-link>
+                    </p>
+                    <p class="coty">版权所有 &copy; 2012-2021</p>
+                </div>
+            </div>
+        </el-footer>
+        <!--回到顶部-->
+        <template>
+            <el-backtop target="#app"></el-backtop>
+        </template>
+        <!--底栏容器end-->
+    </el-container>
+</div>
+</body>
+</html>

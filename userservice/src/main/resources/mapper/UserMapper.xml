@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lxc.user.dao.UserMapper">
+
+    <resultMap type="com.lxc.common.entity.user.User" id="baseMap">
+        <id column="uid" jdbcType="INTEGER" property="uid"/>
+        <result column="account" jdbcType="VARCHAR" property="account"/>
+        <result column="username" jdbcType="VARCHAR" property="username"/>
+        <result column="password" jdbcType="VARCHAR" property="account"/>
+        <result column="role_id" jdbcType="INTEGER" property="roleId"/>
+        <result column="avatar" jdbcType="VARCHAR" property="avatar"/>
+        <result column="coin" jdbcType="INTEGER" property="coin"/>
+        <result column="scoin" jdbcType="INTEGER" property="scoin"/>
+        <result column="growth" jdbcType="INTEGER" property="growth"/>
+        <result column="sex" jdbcType="CHAR" property="sex"/>
+        <result column="birthday" jdbcType="DATE" property="birthday"/>
+        <result column="phone" jdbcType="BIGINT" property="phone"/>
+        <result column="register_time" jdbcType="DATE" property="registerTime"/>
+        <result column="register_ip" jdbcType="VARCHAR" property="registerIp"/>
+        <result column="modify_time" jdbcType="VARCHAR" property="modifyTime"/>
+        <result column="salt" jdbcType="VARCHAR" property="salt"/>
+    </resultMap>
+
+    <sql id="base_list">
+        uid,account,username,role_id,avatar,coin,scoin,growth,sex,birthday,phone
+    </sql>
+
+    <sql id="main_list">
+        uid,account,username,avatar
+    </sql>
+
+    <select id="findAccount" parameterType="string" resultType="integer">
+        select count(1) from user where account=#{account}
+    </select>
+
+    <select id="findUserName" parameterType="string" resultType="integer">
+        select count(1) from user where username=#{username}
+    </select>
+
+    <select id="getSaltByAccount" parameterType="string" resultType="string">
+        select salt from user where account=#{account}
+    </select>
+
+    <select id="findUser" parameterType="com.lxc.common.entity.user.User" resultType="com.lxc.common.entity.user.User">
+        select
+        <include refid="base_list"/>
+        from user
+        where account=#{account} and password=#{password}
+    </select>
+
+    <select id="getUserById" parameterType="integer" resultType="com.lxc.common.entity.user.User">
+        select
+        <include refid="base_list"/>
+        from user
+        where uid=#{uid}
+    </select>
+
+    <select id="getMainInfo" resultType="com.lxc.common.entity.user.User">
+        select
+        <include refid="main_list"/>
+        from user
+        where uid=#{uid}
+    </select>
+    <select id="selectBirthdayUser" parameterType="date" resultType="com.lxc.common.entity.user.User">
+        select uid,account,username from user where MONTH(birthday) = MONTH(date(#{date,jdbcType=DATE}))
+        and DAY(birthday) = DAY(date(#{date,jdbcType=DATE}))
+    </select>
+
+    <insert id="insertUser" parameterType="com.lxc.common.entity.user.User">
+        insert into user
+        (account,username,password,register_time,register_ip,salt)
+        values
+        (#{account},#{username},#{password},now(),#{registerIp},#{salt})
+    </insert>
+
+    <update id="updateUser" parameterType="com.lxc.common.entity.user.User">
+        update user
+        <set>
+            <if test="username!=null">username=#{username},</if>
+            <if test="password!=null">password=#{password},</if>
+            <if test="avatar!=null">avatar=#{avatar},</if>
+            <if test="sex!=null">sex=#{sex},</if>
+        </set>
+        where uid=#{uid}
+    </update>
+
+    <update id="payCoin">
+        update user set coin=coin-1,scoin=scoin+1,growth=growth+5 where coin>0 and uid=#{uid}
+    </update>
+
+    <update id="payScoin">
+        update user set scoin=scoin-#{num},growth=growth+10 where scoin>0 and uid=#{uid}
+    </update>
+    
+    <update id="addCoinExp">
+        update user
+        <set>
+            <if test="coin!=null">
+                coin=coin+#{coin},
+            </if>
+            <if test="scoin!=null">
+                scoin=scoin+#{scoin},
+            </if>
+            <if test="growth!=null">
+                growth=growth+#{growth},
+            </if>
+        </set>
+        where uid=#{uid}
+    </update>
+
+    <update id="dailyAddCoin">
+        update user set coin=coin+1
+    </update>
+
+</mapper>

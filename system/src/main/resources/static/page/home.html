@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>home</title>
+  <script type="text/javascript" src="../js/main.js"></script>
+  <script type="text/javascript" src="../js/vue.min.js"></script>
+  <script type="text/javascript" src="../elementui/index.js"></script>
+  <script type="text/javascript" src="../js/axios.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="../elementui/elementui.css"/>
+  <link rel="stylesheet" type="text/css" href="../css/main.css">
+  <link rel="stylesheet" type="text/css" href="../css/home.css">
+  <style>
+    #app{
+      overflow: hidden;
+      overflow-y: scroll;
+    }
+  </style>
+</head>
+<body>
+<script>
+  window.onload = function () {
+    new Vue({
+      el:'#app',
+      data:{
+        api:api,
+        src:src,
+        user:{uid:'',avatar:'',roleId:'',account:'',username:''},
+        activeIndex:'synthesize',
+        carousel:[],
+        keyword:'',
+        searchWord:'',
+        //top10数据
+        top:{
+          video:[],
+          article:[],
+          file:[]
+        },
+        video:{
+          totalPage:1,
+          currentPage:1,
+          size:30,
+          totalSize:0,
+          videoList:[]
+        },
+        file:{
+          totalPage:1,
+          currentPage:1,
+          size:10,
+          totalSize:0,
+          fileList:[]
+        },
+        article:{
+          totalPage:1,
+          currentPage:1,
+          size:10,
+          totalSize:0,
+          articleList:[]
+        },
+        hotWords:[]
+      },
+      methods:{
+        view(path){
+          if (this.user==='')
+            window.location.href='/view/login';
+          else
+            window.location.href='/view/publish';
+        },
+        handleSelect(key,keyPath){
+          console.log(key);
+          this.activeIndex = key;
+          switch (key) {
+            case 'synthesize':
+              this.getResource();
+              this.getTop10();
+              break;
+            case 'video':
+              this.getVideo();
+              break;
+            case 'file':
+              this.getFile();
+              break;
+            case 'article':
+              this.getArticle();
+              break;
+          }
+        },
+        getVideo(){
+          axios({
+            url:api+'search/searchVideo',
+            method:'get',
+            params:{
+              keyword:this.searchWord,
+              currentPage:this.video.currentPage,
+              size:this.video.size
+            }
+          }).then(res=>{
+            console.log(res.data);
+            if (res.data.result){
+              this.video.currentPage = res.data.currentPage;
+              this.video.totalPage = res.data.totalPage;
+              this.video.totalSize = res.data.totalSize;
+              this.video.videoList = res.data.data;
+            }
+          })
+        },
+        getArticle(){
+          axios({
+            url:api+'search/searchArticle',
+            method:'get',
+            params:{
+              keyword:this.searchWord,
+              currentPage:this.article.currentPage,
+              size:this.article.size
+            }
+          }).then(res=>{
+            console.log(res.data);
+            if (res.data.result){
+              this.article.currentPage = res.data.currentPage;
+              this.article.totalPage = res.data.totalPage;
+              this.article.totalSize = res.data.totalSize;
+              this.article.articleList = res.data.data;
+            }
+          })
+        },
+        getFile(){
+          axios({
+            url:api+'search/searchFile',
+            method:'get',
+            params:{
+              keyword:this.searchWord,
+              currentPage:this.file.currentPage,
+              size:this.file.size
+            }
+          }).then(res=>{
+            console.log(res.data);
+            if (res.data.result){
+              this.file.currentPage = res.data.currentPage;
+              this.file.totalPage = res.data.totalPage;
+              this.file.totalSize = res.data.totalSize;
+              this.file.fileList = res.data.data;
+            }
+            console.log(this.file);
+          })
+        },
+        //列表翻页
+        currentChange(val){
+          switch (this.activeIndex) {
+            case 'video':
+              this.video.currentPage = val;
+              this.getVideo();
+              break;
+            case 'article':
+              this.article.currentPage = val;
+              this.getArticle();
+              break;
+            case 'file':
+              this.file.currentPage = val;
+              this.getFile();
+              break;
+          }
+        },
+        /*获取静态资源*/
+        getResource(){
+          axios({
+            url:api+'resources/carousel',
+            method:'get'
+          },{withCredentials:true}).then(res=>{
+            this.carousel = res.data.data;
+          });
+        },
+        getHotWord(queryString,callback){
+          console.log('keyword:'+this.keyword);
+          axios({
+            url:api+'search/getHotWord',
+            method:'get',
+            params:{keyword:this.keyword}
+          }).then(res=>{
+            if (res.data.result){
+              this.hotWords = res.data.data;
+            }
+            callback(this.hotWords);
+          });
+          console.log(this.hotWords);
+        },
+        search(){
+          //将搜索框内容赋值给搜索关键词,且当前页面置为1
+          this.searchWord = this.keyword;
+          if (this.activeIndex==='video'){
+            this.video.currentPage = 1;
+            this.getVideo();
+            return;
+          }
+          if (this.activeIndex==='article'){
+            this.article.currentPage = 1;
+            this.getArticle();
+            return;
+          }
+          if (this.activeIndex==='file'){
+            this.file.currentPage = 1;
+            this.getFile();
+            return;
+          }
+        },
+        //查看视频、文件、文章详情
+        viewDetail(val,type){
+          switch (type) {
+            case 'video':
+              sessionStorage.setItem("video",JSON.stringify(val));
+              window.open('/view/video');
+              break;
+            case 'article':
+              sessionStorage.setItem("article",JSON.stringify(val));
+              window.open('/view/article');
+              break;
+            case 'file':
+              sessionStorage.setItem("file",JSON.stringify(val));
+              window.open('/view/file');
+              break;
+          }
+        },
+        isLogin(){
+          let token = localStorage.getItem("token");
+          if (token!=null){
+            axios({
+              url:api+'login/isLoginByToken',
+              method: 'get',
+              params:{token:localStorage.getItem("token")}
+            }).then(res=>{
+              if(res.data.result){
+                //localStorage存储json，需要转换为对象,将token赋值给cookie
+                this.user = JSON.parse(localStorage.getItem("user"));
+                document.cookie = "token="+token;
+                console.log(this.user);
+              }else{
+                localStorage.removeItem("user");
+                localStorage.removeItem("token");
+                this.$message.error('身份认证过期，请重新登录');
+              }
+            })
+          }
+        },
+        profile(value){
+          if (value==='logout'){
+            axios({
+              url:api+'login/userLogout',
+              method:'delete'
+            }).then(res=>{
+              if (res.data.result){
+                this.user.uid = '';
+                this.user.avatar = '';
+                this.user.username = '';
+                localStorage.removeItem("user");
+              }
+            });
+            return;
+          }
+          sessionStorage.setItem("profile",value);
+          window.location.href='/view/profile';
+        },
+        getTop10(){
+          axios.get(api+'search/getTop10').then(res=>{
+            if (res.data.result){
+              this.top.video = res.data.data.video;
+              this.top.article = res.data.data.article;
+              this.top.file = res.data.data.file;
+            }
+          })
+        }
+      },
+      mounted(){
+        if (localStorage.getItem("user")!==null)
+          this.user = JSON.parse(localStorage.getItem("user"));
+        this.isLogin();
+        this.getResource();
+        this.getTop10();
+      }
+    })
+  }
+</script>
+<div id="app">
+  <el-container>
+    <!--顶栏容器-->
+    <template>
+      <el-affix :offset="120">
+        <div>
+          <el-menu :default-active="activeIndex" mode="horizontal"
+                   @select="handleSelect" active-text-color="#409EFF">
+            <el-menu-item style="margin-left: 40px;margin-right: 40px">
+              <el-link :underline="false" href="/"><h2>We Share</h2></el-link>
+            </el-menu-item>
+            <el-menu-item index="synthesize" class="menu-item">综合</el-menu-item>
+            <el-menu-item index="video" class="menu-item">视频</el-menu-item>
+            <el-menu-item index="live" class="menu-item">直播</el-menu-item>
+            <el-menu-item index="file" class="menu-item">文件</el-menu-item>
+            <el-menu-item index="article" class="menu-item">专栏</el-menu-item>
+            <el-menu-item index="user" class="menu-item">用户</el-menu-item>
+            <a v-if="user.uid==''" href="/view/login">
+              <el-avatar style="margin: 10px 60px">登录</el-avatar>
+            </a>
+            <el-dropdown v-if="user.uid!=''">
+              <a @click="profile('userInfo')">
+                <el-avatar style="margin: 10px" :src="src+user.avatar">user</el-avatar>
+              </a>
+              <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item>
+                  <el-link @click="profile('userInfo')" :underline="false">个人信息</el-link>
+                </el-dropdown-item>
+                <el-dropdown-item v-if="user.roleId>1">
+                  <el-link @click="profile('videoCheck')" :underline="false">视频审核</el-link>
+                </el-dropdown-item>
+                <el-dropdown-item>
+                  <el-link @click="profile('wallet')" :underline="false">我的钱包</el-link>
+                </el-dropdown-item>
+                <el-dropdown-item>
+                  <el-link @click="profile('logout')" :underline="false">退出登录</el-link>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </el-dropdown>
+            <el-button type="primary" style="float: right;margin: 12px" @click="view('/view/publish')">投稿</el-button>
+          </el-menu>
+        </div>
+        <!--<el-header class="top" id="top">
+
+        </el-header>-->
+      </el-affix>
+    </template>
+    <!--顶栏容器end-->
+    <!--主要区域顶部容器-->
+    <el-container>
+      <el-aside style="width:100px"></el-aside>
+      <el-container style="min-height: 1000px">
+        <!--主要区域容器-->
+        <el-main>
+          <el-autocomplete class="search"
+                           class="inline-input"
+                           v-model="keyword"
+                           :fetch-suggestions="getHotWord"
+                           placeholder="请输入内容"
+                           @focus="getHotWord"
+                           @select="search"
+          ></el-autocomplete>
+          <el-button type="primary" icon="el-icon-search" @click="search">搜索</el-button>
+          </el-input>
+          <!--综合-->
+          <div v-show="activeIndex=='synthesize'" style="padding-bottom: 30px">
+            <!--轮播图-->
+            <div style="width:70%;margin: auto">
+              <el-carousel :interval="4000" type="card" height="200px">
+                <el-carousel-item v-for="item in carousel" :key="item">
+                  <el-image :src="src+item.path" fit="fill"></el-image>
+                </el-carousel-item>
+              </el-carousel>
+            </div>
+            <!--top10-->
+            <div class="block-content">
+              <h2>热门视频</h2>
+              <el-space wrap>
+                <!--视频top10-->
+                <el-card class="card" v-for="(video,index) in top.video" :key="video.svid">
+                  <div class="play_box">
+                    <a @click="viewDetail(video,'video')">
+                      <el-image class="video_list" :src="src+video.posterPath"></el-image>
+                    </a>
+                    <div class="title" v-html="video.title">{{video.title}}</div>
+                    <div class="video_detail">
+                      <div style="display: inline;margin-right: 65px">
+                        <el-image src="../img/icon/playNum.png"></el-image>
+                        <span>{{video.viewNum}}</span>
+                      </div>
+                      <div style="display: inline">
+                        <el-image src="../img/icon/time.png"></el-image>
+                        <span>{{video.createTime.substring(0,10)}}</span>
+                      </div><br>
+                      <div style="display: inline">
+                        <el-image src="../img/icon/user.png"></el-image>
+                        <span>{{video.username}}</span>
+                      </div>
+                    </div>
+                    <a class="icon_play" @click="viewDetail(video,'video')"></a>
+                  </div>
+                </el-card>
+              </el-space>
+            </div>
+            <div class="block-content">
+              <h2>热门文件</h2>
+              <!--文件列表-->
+              <div style="width: 100%;height: 130px;margin-top: 15px" v-for="file in top.file">
+                <el-link :underline="false" @click="viewDetail(file,'file')"><p><h3 v-html="file.title"></h3></p></el-link>
+                <div style="height: 60px"  class="div-text">
+                  <span v-if="file.introduction!=''">{{file.introduction.substring(0,150)}}</span>
+                </div>
+                <div>
+                  <i class="el-icon-user-solid"></i>{{file.username}}
+                  <div style="display: inline-block;margin-left: 25px">
+                    <el-image style="height: 15px;width: 15px" src="../img/icon/view.svg"></el-image>
+                    {{file.viewNum}}&nbsp;&nbsp;&nbsp;&nbsp;
+                    <el-image style="height: 15px;width: 15px" src="../img/icon/like.svg"></el-image>
+                    {{file.likeNum}}&nbsp;&nbsp;&nbsp;&nbsp;
+                    <el-image style="height: 15px;width: 15px" src="../img/icon/star.svg"></el-image>
+                    {{file.starNum}}
+                  </div>
+                </div>
+                <el-divider></el-divider>
+              </div>
+            </div>
+            <div class="block-content">
+              <h2>热门文章</h2>
+              <!--文章列表-->
+              <div style="width: 100%;height: 130px;margin-top: 15px" v-for="article in top.article">
+                <el-link :underline="false" @click="viewDetail(article,'article')">
+                  <p><h3 v-html="article.title"></h3></p>
+                </el-link>
+                <div style="height: 60px"  class="div-text">
+                  {{article.content.substring(0,150)}}
+                </div>
+                <div>
+                  <i class="el-icon-user-solid"></i>{{article.username}}
+                  <div style="display: inline-block;margin-left: 25px">
+                    <el-image style="height: 15px;width: 15px" src="../img/icon/view.svg"></el-image>
+                    {{article.viewNum}}&nbsp;&nbsp;&nbsp;&nbsp;
+                    <el-image style="height: 15px;width: 15px" src="../img/icon/like.svg"></el-image>
+                    {{article.likeNum}}&nbsp;&nbsp;&nbsp;&nbsp;
+                    <el-image style="height: 15px;width: 15px" src="../img/icon/star.svg"></el-image>
+                    {{article.starNum}}
+                  </div>
+                </div>
+                <el-divider></el-divider>
+              </div>
+            </div>
+            <!--top10end-->
+          </div>
+          <!--综合end-->
+          <!--视频-->
+          <div v-show="activeIndex=='video'">
+            <el-space wrap>
+              <!--视频列表-->
+              <el-card class="card" v-for="(video,index) in video.videoList" :key="video.svid">
+                <div class="play_box">
+                  <a @click="viewDetail(video,'video')">
+                    <el-image class="video_list" :src="src+video.posterPath"></el-image>
+                  </a>
+                  <div class="title" v-html="video.title">{{video.title}}</div>
+                  <div class="video_detail">
+                    <div style="display: inline;margin-right: 65px">
+                      <el-image src="../img/icon/playNum.png"></el-image>
+                      <span>{{video.viewNum}}</span>
+                    </div>
+                    <div style="display: inline">
+                      <el-image src="../img/icon/time.png"></el-image>
+                      <span>{{video.createTime.substring(0,10)}}</span>
+                    </div><br>
+                    <div style="display: inline">
+                      <el-image src="../img/icon/user.png"></el-image>
+                      <span>{{video.username}}</span>
+                    </div>
+                  </div>
+                  <a class="icon_play" @click="viewDetail(video,'video')"></a>
+                </div>
+              </el-card>
+            </el-space>
+            <!--视频列表end-->
+            <el-pagination
+                hide-on-single-page="true"
+                background
+                :page-size="video.size"
+                :page-count="video.totalPage"
+                :current-page="video.currentPage"
+                @current-change="currentChange"
+                layout="prev, pager, next"
+                :total="video.totalSize">
+            </el-pagination>
+          </div>
+          <!--视频end-->
+          <!--直播-->
+          <div v-show="activeIndex=='live'">
+            <div class="empty">
+              <el-image src="../img/empty.svg"></el-image>
+            </div>
+          </div>
+          <!--直播end-->
+          <!--文件-->
+          <div v-show="activeIndex=='file'" class="block-content">
+            <!--文件列表-->
+            <div style="width: 100%;height: 130px;margin-top: 15px" v-for="file in file.fileList">
+              <el-link :underline="false" @click="viewDetail(file,'file')"><p><h3 v-html="file.title"></h3></p></el-link>
+              <div style="height: 60px">
+                <span v-if="file.introduction!=''">{{file.introduction.substring(0,150)}}</span>
+              </div>
+              <div>
+                <i class="el-icon-user-solid"></i>{{file.username}}
+                <div style="display: inline-block;margin-left: 25px">
+                  <el-image style="height: 15px;width: 15px" src="../img/icon/view.svg"></el-image>
+                  {{file.viewNum}}&nbsp;&nbsp;&nbsp;&nbsp;
+                  <el-image style="height: 15px;width: 15px" src="../img/icon/like.svg"></el-image>
+                  {{file.likeNum}}&nbsp;&nbsp;&nbsp;&nbsp;
+                  <el-image style="height: 15px;width: 15px" src="../img/icon/star.svg"></el-image>
+                  {{file.starNum}}
+                </div>
+              </div>
+              <el-divider></el-divider>
+            </div>
+            <!--文件列表end-->
+            <el-pagination
+                style="margin: 40px 0 40px 0"
+                hide-on-single-page="true"
+                background
+                :page-size="file.size"
+                :page-count="file.totalPage"
+                :current-page="file.currentPage"
+                @current-change="currentChange"
+                layout="prev, pager, next"
+                :total="file.totalSize">
+            </el-pagination>
+          </div>
+          <!--文件end-->
+          <!--专栏-->
+          <div v-show="activeIndex=='article'" class="block-content">
+            <!--文章列表-->
+            <div style="width: 100%;height: 130px;margin-top: 15px" v-for="article in article.articleList">
+              <el-link :underline="false" @click="viewDetail(article,'article')"><p><h3 v-html="article.title"></h3></p></el-link>
+              <div style="height: 60px" class="div-text">
+                {{article.content.substring(0,150)}}
+              </div>
+              <div>
+                <i class="el-icon-user-solid"></i>{{article.username}}
+                <div style="display: inline-block;margin-left: 25px">
+                  <el-image style="height: 15px;width: 15px" src="../img/icon/view.svg"></el-image>
+                  {{article.viewNum}}&nbsp;&nbsp;&nbsp;&nbsp;
+                  <el-image style="height: 15px;width: 15px" src="../img/icon/like.svg"></el-image>
+                  {{article.likeNum}}&nbsp;&nbsp;&nbsp;&nbsp;
+                  <el-image style="height: 15px;width: 15px" src="../img/icon/star.svg"></el-image>
+                  {{article.starNum}}
+                </div>
+              </div>
+              <el-divider></el-divider>
+            </div>
+            <!--文章列表end-->
+            <el-pagination
+                style="margin: 40px 0 40px 0"
+                hide-on-single-page="true"
+                background
+                :page-size="article.size"
+                :page-count="article.totalPage"
+                :current-page="article.currentPage"
+                @current-change="currentChange"
+                layout="prev, pager, next"
+                :total="article.totalSize">
+            </el-pagination>
+          </div>
+          <!--专栏end-->
+          <!--用户-->
+          <div v-show="activeIndex=='user'">
+            <div class="empty">
+              <el-image src="../img/empty.svg"></el-image>
+            </div>
+          </div>
+          <!--用户end-->
+        </el-main>
+        <!--主要区域容器end-->
+      </el-container>
+      <!--右栏容器-->
+      <el-aside style="width: 100px"></el-aside>
+    </el-container>
+    <!--底栏容器-->
+    <el-footer class="el-footer">
+      <div class="footer">
+        <div class="header"><p>weshare 视频文件共享交流平台</p></div>
+        <div class="github">
+          <a href="https://github.com/liuxianchun/weshare" target="_blank">
+            <div class="github-but"></div>
+          </a>
+        </div>
+        <div class="mod_help">
+          <p>
+            <el-link href="/view/home" :underline="false">首页</el-link>
+            <span>|</span>
+            <el-link href="https://github.com/liuxianchun" :underline="false">关于我们</el-link>
+            <span>|</span>
+            <el-link href="https://github.com/liuxianchun" :underline="false">联系我们</el-link>
+          </p>
+          <p class="coty">版权所有 &copy; 2012-2021</p>
+        </div>
+      </div>
+    </el-footer>
+    <!--底栏容器end-->
+  </el-container>
+  <!--回到顶部-->
+  <template>
+    <el-backtop target="#app"></el-backtop>
+  </template>
+</div>
+</body>
+</html>

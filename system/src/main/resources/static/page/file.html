@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>文件</title>
+  <script type="text/javascript" src="../js/main.js"></script>
+  <script type="text/javascript" src="../js/vue.min.js"></script>
+  <script type="text/javascript" src="../elementui/index.js"></script>
+  <script type="text/javascript" src="../js/axios.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="../elementui/elementui.css"/>
+  <link rel="stylesheet" type="text/css" href="../css/main.css">
+  <link rel="stylesheet" type="text/css" href="../css/home.css">
+</head>
+<body>
+<script>
+  window.onload = function () {
+    const vue = new Vue({
+      el:'#app',
+      data:{
+        api:api,
+        src:src,
+        icon:{
+          like:'../img/icon/like.svg',
+          like_on:'../img/icon/like_on.svg',
+          star:'../img/icon/star.svg',
+          star_on:'../img/icon/star_on.svg'
+        },
+        user:{
+          avatar:'',uid:'',username:''
+        },
+        nums: {
+          viewNum: '',
+          likeNum: '',
+          starNum: '',
+          downloadNum:'',
+          likeStatus: false,
+          starStatus: false,
+        },
+        subscribeList:[],
+        subscribeStatus:false, /*关注*/
+        file:{
+          snowFlakeId:'',
+          uid:'',
+          username:'',
+          avatar:'',
+          viewNum:'',
+          likeNum:'',
+          downloadNum:'',
+          createTime:'',
+          title:'',
+          introduction:'',
+        },
+        myComment:'',
+        comment:{
+          currentPage:1,
+          totalPage:1,
+          totalSize:0,
+          size:15,
+          list:[]
+        }
+      },
+      methods:{
+        currentChange(val){
+          this.comment.currentPage = val;
+          this.getComment();
+        },
+        addComment(){
+          if (this.user.uid === '') {
+            this.$message.warning('请先登录');
+            return;
+          }
+          if (this.myComment.trim()==='')
+            this.$message.warning('评论内容不能为空');
+          if (this.myComment.length>800)
+            this.$message.warning('评论内容长度过长');
+          axios({
+            url:api+'comment/addComment',
+            method:'post',
+            data:{
+              objectType:'file',
+              objectNo:this.file.snowFlakeId,
+              content:this.myComment
+            }
+          }).then(res=>{
+            console.log(res.data);
+            if (res.data.result){
+              this.comment.list = res.data.result;
+              this.$message.success('发表评论成功');
+              this.getComment();
+            }else
+              this.$message.warning(res.data.message);
+          });
+          //axios请求为异步操作，发送请求后清空评论
+          this.myComment = '';
+        },
+        getComment(){
+          if (this.file.snowFlakeId==='')
+            return;
+          axios({
+            url:api+'comment/getComment',
+            method:'post',
+            data:{
+              currentPage:this.comment.currentPage,
+              size:this.comment.size,
+              objectType:'file',
+              objectNo:this.file.snowFlakeId,
+            }
+          }).then(res=>{
+            console.log(res.data);
+            if (res.data.result){
+              this.comment.currentPage = res.data.currentPage;
+              this.comment.totalPage = res.data.totalPage;
+              this.comment.totalSize = res.data.totalSize;
+              this.comment.list = res.data.data;
+            }
+          })
+        },
+        //获取作者用户信息
+        getAutherInfo(){
+          axios({
+            url:api+'user/getUserInfoById',
+            method:'get',
+            params:{uid:this.file.uid}
+          }).then(res=>{
+            if (res.data.result){
+              this.file.username = res.data.data.username;
+              this.file.avatar = res.data.data.avatar;
+            }
+          })
+        },
+        //关注、取消关注
+        async subscribe() {
+          if (this.user.uid === '') {
+            this.$message.warning('请先登录');
+            return;
+          }
+          if (this.subscribeStatus) {
+            let flag = await this.$confirm('是否取消关注?', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            }).then(()=>{
+              return true;
+            }).catch(() => {
+              return false;
+            });
+            if (!flag)
+              return;
+          }
+          axios({
+            url: api + 'user/subscribe',
+            method: 'post',
+            params: {
+              uid: this.user.uid,
+              flowerId: this.file.uid,
+              status: !this.subscribeStatus
+            }
+          }).then(res => {
+            if (res.data.result) {
+              this.subscribeStatus = !this.subscribeStatus;
+            }
+          })
+        },
+        //获取关注列表
+        getSubscribeList() {
+          axios({
+            url: api + 'user/subscribe/getSubscribeList',
+            method: 'get',
+            params: {uid: this.user.uid}
+          }).then(res => {
+            if (res.data.result) {
+              this.subscribeList = res.data.data;
+              this.subscribeStatus = this.subscribeList.indexOf(this.file.uid) !== -1;
+            }
+          })
+        },
+        like() {
+          if (this.user.uid === '') {
+            this.$message.warning('请先登录');
+            return;
+          }
+          this.nums.likeStatus = !this.nums.likeStatus;
+          if (this.nums.likeStatus)
+            this.nums.likeNum = this.nums.likeNum + 1;
+          else
+            this.nums.likeNum = this.nums.likeNum - 1;
+          axios({
+            url: api + 'user/subscribe/like',
+            method: 'post',
+            params: {
+              objectNo: this.file.snowFlakeId,
+              objectType: 'file',
+              status: this.nums.likeStatus
+            }
+          })
+        },
+        downloadFile(){
+          if (this.user.uid === '') {
+            this.$message.warning('请先登录');
+            return;
+          }
+          this.$confirm('首次下载将消耗一个s币, 是否下载?', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(()=>{
+            axios({
+              url:api+'resources/canDownload',
+              method:'post',
+              params:{objectNo:vue.file.snowFlakeId}
+            }).then(res=>{
+              if (res.data.result){
+                let form = document.getElementById('downloadFileForm');
+                form.action = api + 'resources/downloadFile?objectNo='+vue.file.snowFlakeId;
+                form.submit();
+              }else{
+                vue.$message.warning(res.data.message);
+              }
+            });
+          });
+        },
+        //获取点赞、收藏数据
+        getNums() {
+          axios({
+            url: api + 'user/subscribe/getNum',
+            method: 'get',
+            params: {
+              objectNo: this.file.snowFlakeId,
+              objectType: 'file'
+            }
+          }).then(res => {
+            if (res.data.result) {
+              console.log(res.data.data);
+              this.nums = res.data.data;
+            }
+          })
+        },
+        //增加浏览量
+        addView() {
+          if (this.file.snowFlakeId === '')
+            return;
+          window.setTimeout(function () {
+            axios({
+              url: api + 'user/subscribe/addView',
+              method: 'post',
+              params: {
+                objectNo: vue.file.snowFlakeId,
+                objectType: 'file'
+              }
+            })
+          }, 10 * 1000);
+        }
+      },
+      computed:{
+        fileSize:function () {
+          let size = this.file.size;
+          let _KB = 1024;
+          let _MB = 1024*1024;
+          let _GB = 1024*1024*1024;
+          if (size<_KB)
+            return size.toFixed(2)+'B';
+          if (size<_MB)
+            return (size/_KB).toFixed(2)+'KB';
+          if (size<_GB)
+            return (size/_MB).toFixed(2)+'MB';
+          return (size/_GB).toFixed(2)+'GB';
+        }
+      },
+      mounted(){
+        let localUser = JSON.parse(localStorage.getItem("user"));
+        if (localUser!=null)
+          this.user = localUser;
+        let file = JSON.parse(sessionStorage.getItem("file"));
+        if (file!=null){
+          this.file = file;
+          this.getNums();
+          this.getAutherInfo();
+          this.getSubscribeList();
+          this.addView();
+          console.log(this.file);
+        }
+        this.getComment();
+      }
+    })
+  };
+</script>
+<div id="app">
+  <el-container>
+    <div>
+      <el-link style="float:left;margin-left: 15px" @click="window.location.href='/'" :underline="false">
+        <h2>We Share</h2>
+      </el-link>
+    </div>
+    <!--主容器-->
+    <el-container>
+      <el-card style="width: 900px;margin: 0 auto 45px auto;padding: 40px 80px 40px 80px">
+        <h3>{{this.file.title}}</h3>
+        <el-avatar :src="src+file.avatar" :key="src+file.avatar">user</el-avatar>
+        <div style="display: inline-block;position: relative;top: -18px;left: 15px">
+          <span style="color: hotpink">{{this.file.username}}</span>
+          <div style="display: inline" v-show="user.uid!=file.uid">
+            <el-button v-if="subscribeStatus" @click="subscribe" type="info" size="small" style="margin-left: 20px">已关注</el-button>
+            <el-button v-else @click="subscribe" type="primary" size="small" style="margin-left: 20px">关注</el-button>
+          </div>
+        </div>
+        <p>{{this.nums.viewNum}}浏览&nbsp;&nbsp;
+          {{this.nums.likeNum}}点赞&nbsp;&nbsp;
+          {{this.nums.downloadNum}}下载&nbsp;&nbsp;
+          {{this.file.createTime}}</p>
+        <div class="div-text">
+          {{this.file.introduction}}
+        </div>
+        <el-divider></el-divider>
+        <div class="video_num" style="margin-bottom: 25px">
+          <el-image src="../img/icon/file.svg"></el-image>{{this.file.name}}&nbsp;&nbsp;&nbsp;{{fileSize}}<br>
+          <a @click="like">
+            <el-image :src="nums.likeStatus?icon.like_on:icon.like"></el-image>
+          </a>
+          <div class="text">{{nums.likeNum}}</div>
+          <a @click="downloadFile">
+            <el-image src="../img/icon/download.svg"></el-image>&nbsp;
+          </a>
+          <div class="text">{{nums.downloadNum}}</div>
+          <form type="hidden" method="post" action="/" id="downloadFileForm"></form>
+        </div>
+        <el-form :inline="true">
+          <el-form-item>
+            <el-avatar style="margin: 12px" :src="src+user.avatar">user</el-avatar>
+          </el-form-item>
+          <el-form-item>
+            <el-input type="textarea" placeholder="发一条友善的评论" :autosize="{minRows: 2, maxRows: 10}"
+                      v-model="myComment" style="width: 560px"></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="addComment">发表评论</el-button>
+          </el-form-item>
+        </el-form>
+        <el-divider></el-divider>
+        <div v-for="comment in comment.list">
+          <div style="position:absolute;display: inline-block;margin: 10px">
+            <el-avatar :src="src+comment.avatar">user</el-avatar>
+          </div>
+          <div class="div-text" style="display: inline-block;margin-left: 80px;height: 100%;">
+            <p style="color: hotpink">{{comment.username}}&nbsp;&nbsp;&nbsp;<span style="color: red">Lv{{comment.userLevel}}</span>
+              <el-image style="width: 16px;height: 16px;margin-left:10px;position: relative;top: 3px"
+                        v-show="file.uid==comment.uid" src="../img/icon/up.svg"></el-image>
+            </p>
+            {{comment.content}}
+            <p class="tip">{{comment.createTime}}</p>
+          </div>
+          <el-divider></el-divider>
+        </div>
+        <el-pagination
+            hide-on-single-page="true"
+            background
+            :page-size="comment.size"
+            :page-count="comment.totalPage"
+            :current-page="comment.currentPage"
+            @current-change="currentChange"
+            layout="prev, pager, next"
+            :total="comment.totalSize">
+        </el-pagination>
+      </el-card>
+    </el-container>
+    <!--主容器end-->
+    <!--底栏容器-->
+    <el-footer class="el-footer">
+      <div class="footer">
+        <div class="header"><p>weshare 视频文件共享交流平台</p></div>
+        <div class="github">
+          <a href="https://github.com/liuxianchun/weshare" target="_blank">
+            <div class="github-but"></div>
+          </a>
+        </div>
+        <div class="mod_help">
+          <p>
+            <el-link href="/view/home" :underline="false">首页</el-link>
+            <span>|</span>
+            <el-link href="https://github.com/liuxianchun" :underline="false">关于我们</el-link>
+            <span>|</span>
+            <el-link href="https://github.com/liuxianchun" :underline="false">联系我们</el-link>
+          </p>
+          <p class="coty">版权所有 &copy; 2012-2021</p>
+        </div>
+      </div>
+    </el-footer>
+    <!--底栏容器end-->
+  </el-container>
+</div>
+</body>
+</html>

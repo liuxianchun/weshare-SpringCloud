@@ -1,0 +1,32 @@
+.login_input{
+    margin-top:24px;
+}
+.login_card{
+    width:560px;
+    margin: 30px auto;
+    padding: 0 30px 20px 30px;
+}
+.menu-item{
+    width:50%;
+    text-align: center;
+}
+.login_form{
+    padding-top:25px;
+}
+.form-item{
+    padding-top: 0;
+    height:48px;
+}
+.login_form button{
+    width:150px;
+    margin-left: 40px;
+}
+.verifyCode{
+    position: relative;
+    left: 350px;
+    top: -135px;
+}
+.title{
+    padding-left: 200px;
+}
+

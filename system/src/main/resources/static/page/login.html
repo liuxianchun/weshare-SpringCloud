@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>weshare登录注册</title>
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/vue.min.js"></script>
+    <script type="text/javascript" src="../elementui/index.js"></script>
+    <script type="text/javascript" src="../js/axios.min.js"></script>
+    <script type="text/javascript" src="../js/md5.js"></script>
+    <link rel="stylesheet" type="text/css" href="../elementui/elementui.css"/>
+    <link rel="stylesheet" type="text/css" href="../css/login.css">
+</head>
+<body>
+<script>
+    window.onload = function () {
+        axios.defaults.withCredentials=true;
+        const rex_account = /\w+@\w+\.(com|net.cn)/;
+        const rex_username = /[a-zA-Z0-9\u4e00-\u9fa5]{4,16}/;
+        const rex_pass = /^[a-zA-Z][a-zA-Z0-9]{5,12}/;
+        const img_url = api + 'login/getVerifyCode';
+        /*注册校验*/
+        let validateAccount = (
+            (rule, value, callback) => {
+            if (value === '') {
+                callback(new Error('请输入邮箱账号'));
+            } else{
+                if(!rex_account.test(value)){
+                    callback(new Error('请输入正确的邮箱账号'));
+                }else {
+                    axios({
+                        url:api+'login/findAccount',
+                        method:'get',
+                        params:{account:vue.registerForm.account}
+                    },{withCredentials:true}).then(res=>{
+                        console.log(res.data);
+                        if(!res.data.result){
+                            vue.registerCodeFlag = true;
+                            callback(new Error('该账号已注册'));
+                        }
+                        else{
+                            //账号可以注册，允许发送验证码
+                            vue.registerCodeFlag = false;
+                            if (vue.registerForm.username !== '') {
+                                vue.$refs.registerForm.validateField('username');
+                            }
+                            callback();
+                        }
+                    });
+
+                }
+
+            }
+        });
+        let validateUserName = ((rule, value, callback) => {
+            if (value === '') {
+                callback(new Error('请输入用户名'));
+            } else {
+                if(!rex_username.test(value)){
+                    callback(new Error('用户名允许汉字，字母，数字，长度为4-12'));
+                }else {
+                    axios({
+                        url:api+'login/findUserName',
+                        method:'get',
+                        params:{username:vue.registerForm.username}
+                    },{withCredentials:true}).then(res=>{
+                        console.log(res.data);
+                        if(!res.data.result){
+                            callback(new Error('该用户名已被使用'));
+                        }else{
+                            if (vue.registerForm.password !== '') {
+                                vue.$refs.registerForm.validateField('password');
+                                callback();
+                            }
+                            callback();
+                        }
+                    });
+                }
+            }
+        });
+        let validatePassword = ((rule, value, callback) => {
+            if (value === '') {
+                callback(new Error('请输入密码'));
+            } else
+            if(!rex_pass.test(value)){
+                callback(new Error('密码必须以字母开头，包含字母、数字，长度为6-12'));
+            }else
+            if (vue.registerForm.checkPass !== '') {
+                vue.$refs.registerForm.validateField('checkPass');
+                callback();
+            }else
+                callback();
+        });
+        let validateCheckPass = ((rule, value, callback) => {
+            if (value === '') {
+                callback(new Error('请再次输入密码'));
+            } else if (value !== vue.registerForm.password) {
+                callback(new Error('两次输入密码不一致!'));
+            } else {
+                if (vue.registerForm.verifyCode !== '') {
+                    vue.$refs.registerForm.validateField('verifyCode');
+                    callback();
+                }
+                callback();
+            }
+        });
+        let validateVerifyCode = ((rule, value, callback) => {
+            if (value === '') {
+                callback(new Error('请输入验证码'));
+            } else {
+                callback();
+            }
+        });
+        /*登录校验*/
+        let login_account = ((rule, value, callback) => {
+            if (value === '') {
+                callback(new Error('请输入邮箱账号'));
+            } else if(!rex_account.test(value)){
+                callback(new Error('请输入正确的邮箱账号'));
+            }
+            else {
+                callback();
+            }
+        });
+        let login_password = ((rule, value, callback) => {
+            if (value === '') {
+                callback(new Error('请输入密码'));
+            }
+            else {
+                callback();
+            }
+        });
+        let login_verifyCode = ((rule, value, callback) => {
+            if (value === '') {
+                callback(new Error('请输入验证码'));
+            } else {
+                callback();
+            }
+        });
+        const vue = new Vue({
+            el:'#app',
+            data:{
+                showLogin:true,
+                activeIndex:'login',
+                img_url:img_url,
+                registerCodeFlag:true,
+                time_remain:60,
+                button_content:'获取验证码',
+                loginForm: {
+                    login_account:'',
+                    login_password: '',
+                    login_verifyCode: ''
+                },
+                registerForm:{
+                    account:'',
+                    username:'',
+                    password: '',
+                    checkPass:'',
+                    verifyCode: ''
+                },
+                rules: {
+                    account: [
+                        { validator: validateAccount, trigger: 'blur' }
+                    ],
+                    username: [
+                        { validator: validateUserName, trigger: 'blur' }
+                    ],
+                    password: [
+                        { validator: validatePassword, trigger: 'blur' }
+                    ],
+                    checkPass: [
+                        { validator: validateCheckPass, trigger: 'blur' }
+                    ],
+                    verifyCode: [
+                        { validator: validateVerifyCode, trigger: 'blur' }
+                    ],
+                    login_account:[
+                        { validator: login_account, trigger: 'blur' }
+                    ],
+                    login_password:[
+                        { validator: login_password, trigger: 'blur' }
+                    ],
+                    login_verifyCode:[
+                        { validator: login_verifyCode, trigger: 'blur' }
+                    ]
+                }
+            },
+            methods:{
+                handleClick(key){
+                    console.log(key);
+                    this.showLogin = (key ==='login');
+                },
+                register(formName) {
+                    this.$refs[formName].validate((valid) => {
+                        if (valid) {
+                            axios({
+                                url:api+'login/userRegister',
+                                method:'post',
+                                data:{
+                                    account:this.registerForm.account,
+                                    username:this.registerForm.username,
+                                    password:md5('wh'+this.registerForm.password+'er'),
+                                    checkPass:md5('wh'+this.registerForm.checkPass+'er'),
+                                    verifyCode:this.registerForm.verifyCode
+                                }
+                            },{withCredentials:true}).then(res=>{
+                                console.log(res.data);
+                                if(res.data.result){
+                                    localStorage.setItem("user",JSON.stringify(res.data.data.user));
+                                    window.location.href='/view/home';
+                                }
+                                else{
+                                    this.$message.warning(res.data.message);
+                                }
+                            })
+                        } else {
+                            return false;
+                        }
+                    });
+                },
+                login(formName){
+                    this.$refs[formName].validate((valid) => {
+                        if (valid) {
+                            axios({
+                                url:api+'login/userLogin',
+                                method:'post',
+                                data:{
+                                    account:this.loginForm.login_account,
+                                    password:md5('wh'+this.loginForm.login_password+'er'),
+                                    verifyCode:this.loginForm.login_verifyCode
+                                }
+                            },{withCredentials:true}).then(res=>{
+                                console.log(res.data);
+                                if(res.data.result){
+                                    localStorage.setItem("user",JSON.stringify(res.data.data.user));
+                                    localStorage.setItem("token",res.data.data.token);
+                                    window.location.href='/view/home';
+                                }
+                                else{
+                                    this.$message.warning(res.data.message);
+                                    this.getVerifyCode();
+                                }
+                            })
+                        } else {
+                            return false;
+                        }
+                    });
+                },
+                getVerifyCode(){
+                    let code = Math.random();
+                    this.img_url = img_url + '?' + code;
+                },
+                resetForm(formName) {
+                    this.$refs[formName].resetFields();
+                },
+                getRegisterCode(){
+                    this.timer = setInterval(()=>{
+                        if(this.time_remain>0){
+                            this.time_remain = this.time_remain - 1;
+                            this.button_content = '重新获取('+this.time_remain+')';
+                        }else{
+                            //清除当前定时器
+                            clearInterval(this.timer);
+                            this.button_content = '获取验证码';
+                            this.time_remain = 60;
+                            this.registerCodeFlag = false;
+                        }
+                    },1000);
+                    this.registerCodeFlag = true;
+                    axios({
+                        url:api+'login/getMailCode',
+                        method:'get',
+                        params:{account:this.registerForm.account}
+                    }).then(res=>{
+                        console.log(res.data);
+                        if(!res.data.result)
+                            this.$message.error(res.data.message);
+                        else
+                            this.$message.success(res.data.message);
+                    }).catch(err=>{
+                        console.log(err);
+                    })
+                }
+            }
+        });
+    }
+</script>
+<div id="app">
+    <el-card class="login_card">
+        <!--标题-->
+        <div class ="title">
+            <el-link :underline="false" href="/view/home">
+                <h1>We Share</h1>
+            </el-link>
+        </div>
+        <!--切换登录注册页面-->
+        <el-menu
+                :default-active="activeIndex"
+                mode="horizontal"
+                @Select="handleClick">
+            <el-menu-item index="login" class="menu-item">登录</el-menu-item>
+            <el-menu-item index="register" class="menu-item">注册</el-menu-item>
+        </el-menu>
+        <!--登录-->
+        <div v-show="showLogin" class="login_form">
+            <el-form :model="loginForm" status-icon :rules="rules" ref="loginForm" label-width="80px">
+                <el-form-item label="邮箱账号" prop="login_account" class="form-item">
+                    <el-input type="text" prefix-icon="el-icon-message" v-model="loginForm.login_account"
+                              autocomplete="off" placeholder="请输入邮箱账号" clearable></el-input>
+                </el-form-item>
+                <el-form-item label="密码" prop="login_password" class="form-item">
+                    <el-input type="password" prefix-icon="el-icon-lock" v-model="loginForm.login_password"
+                              autocomplete="off" placeholder="请输入密码" clearable></el-input>
+                </el-form-item>
+                <el-form-item label="验证码" prop="login_verifyCode" class="form-item">
+                    <el-input prefix-icon="el-icon-key" v-model="loginForm.login_verifyCode"
+                              placeholder="请输入验证码" style="width: 240px"></el-input>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="login('loginForm')">登录</el-button>
+                    <el-button @click="resetForm('loginForm')">清空</el-button>
+                </el-form-item>
+            </el-form>
+            <div class="verifyCode">
+                <img :src="img_url" @click="getVerifyCode()"/>
+                <el-link style="font-size: 7px;margin-bottom: 15px;margin-left:3px"
+                         @click="getVerifyCode">看不清?换一张</el-link>
+            </div>
+        </div>
+        <!--注册-->
+        <div v-show="!showLogin" class="login_form">
+            <el-form :model="registerForm" status-icon :rules="rules" ref="registerForm" label-width="80px">
+                <el-form-item label="邮箱账号" prop="account">
+                    <el-input type="email" prefix-icon="el-icon-message" v-model="registerForm.account"
+                              autocomplete="off" placeholder="请输入邮箱账号" clearable></el-input>
+                </el-form-item>
+                <el-form-item label="用户名" prop="username">
+                    <el-input prefix-icon="el-icon-user" v-model="registerForm.username"
+                              autocomplete="off" placeholder="请输入用户名" clearable></el-input>
+                </el-form-item>
+                <el-form-item label="密码" prop="password">
+                    <el-input type="password" prefix-icon="el-icon-lock" v-model.number="registerForm.password"
+                              placeholder="请输入密码" clearable></el-input>
+                </el-form-item>
+                <el-form-item label="确认密码" prop="checkPass">
+                    <el-input type="text" prefix-icon="el-icon-lock" v-model.number="registerForm.checkPass"
+                              placeholder="请再次输入密码" clearable></el-input>
+                </el-form-item>
+                <el-form-item label="验证码" prop="verifyCode">
+                    <el-input prefix-icon="el-icon-key" v-model="registerForm.verifyCode"
+                              placeholder="请输入验证码" style="width: 200px"></el-input>
+                    <el-button type="primary" plain :disabled="registerCodeFlag" @click="getRegisterCode()">{{button_content}}</el-button>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="register('registerForm')">注册</el-button>
+                    <el-button @click="resetForm('registerForm')">清空</el-button>
+                </el-form-item>
+            </el-form>
+        </div>
+    </el-card>
+</div>
+</body>
+</html>
