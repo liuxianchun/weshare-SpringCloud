@@ -22,7 +22,7 @@
 访问路径:http(https)://localhost:{{port}}/doc.html
 ```
 
-项目演示:     [huanming.top](huanming.top)
+项目演示:     [huanming.top](https://huanming.top)
 
 ### system
 
